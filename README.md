@@ -5,7 +5,7 @@
 There are several online converters, icon makers and favicon generators that can 
 transform many image formats in *.ICO* files or to achieve reverse process,
 but only a few of them are really working and none of them have an API.
-So i thought to develop a pure python small library not using external software (like *ImageMagick*) to perform this operations.
+So i developped a pure python small library not using external software (like *ImageMagick*) to perform this operations.
 
 ## Features
 - Reads *.ICO* and *.CUR.*
