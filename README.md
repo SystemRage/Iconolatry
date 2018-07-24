@@ -13,7 +13,7 @@ So i developped a pure python small library not using external software (like *I
    - Checks if the image AND mask is correct, otherwise is recomputed if needs.
    - Easy export in other image formats.
    
-- Writes *.ICO* from a set of all supported by PIL image formats.
+- Writes *.ICO* (or *.CUR*) from a set of all supported by PIL image formats.
    - Can be generated *.ICO* multi-sized.
    - Gives info messages about conversion process.
    - Automatically resizes input images to the nearest standard icon size.
@@ -21,7 +21,7 @@ So i developped a pure python small library not using external software (like *I
    - Makes conversion for different color depths, with or not alpha channel / trasparency.
 
 ## Requirements
- *Python 3.5+*,  *PIL (Pillow) 3.3.1+*
+ *Python 3.5+*,  *PIL (Pillow) 3.3.1+*, *Numpy*
 
 ## Usage examples
 #### How to read an *.ICO*.
@@ -40,21 +40,45 @@ So i developped a pure python small library not using external software (like *I
 >>> ico_readed[0][0].save('~/path/folder/export/64x64.png', 'PNG')
 >>> ico_readed[1][0].save('~/path/folder/export/48x48.bmp', 'BMP')
 ```
+#### How to read a *.CUR*.
+```python
+>>> path = '~/path/folder/cursors/test_cur.cur'
+>>> cur_readed, log_err = READER().FromIcoCur( path, rebuild = False )
+>>> cur_readed
+[[<PIL.Image.Image image mode=RGBA size=32x32 at 0x7FB2A2FB3240>, 1, 32, 32, 0, 24]]
+```
 #### How to write an *.ICO*.
 `ToIco( ... )` returns a list containing info messages for each conversion.
 ```python
 >>> forced_bpp_conversion = False
->>> log_mess = WRITER.ToIco( forced_bpp_conversion, [['~/path/folder/pngs/test.png']], ['~/path/folder/icos/test.ico'] )
+>>> log_mess = WRITER().ToIco( forced_bpp_conversion, [['~/path/folder/pngs/test.png']], ['~/path/folder/icos/test.ico'] )
 >>> log_mess
 ['~/path/folder/pngs/test.png with mode "RGBA" have bpp = 32 bit --> Successfully wrote icon to ~/path/folder/icos/test.ico.']
+```
+#### How to write a *.CUR*.
+```python
+>>> forced_bpp_conversion = False
+>>> log_mess = WRITER().ToIco( forced_bpp_conversion, [['~/path/folder/pngs/test.png']], ['~/path/folder/curs/test.cur'] )
+>>> log_mess
+['~/path/folder/pngs/test.png with mode "RGB" have bpp = 24 bit --> Successfully wrote icon to ~/path/folder/curs/test.cur.']
+```
+#### How to write a multi-size *.ICO* from various image formats.
+```python
+>>> forced_bpp_conversion = False
+>>> log_mess = WRITER().ToIco( forced_bpp_conversion, [ ['~/path/folder/pngs/test0.png', '~/path/folder/jpgs/test1.jpg',
+                                                         '~/path/folder/bmps/test2.bmp ] 
+                                                      ],
+                                                        ['~/path/folder/icos/test012.ico'] )
+>>> log_mess
+['~/path/folder/pngs/test0.png with mode "RGBA" have bpp = 32 bit and size = 48 x 48;  ~/path/folder/jpgs/test1.jpg with mode "RGB" have bpp = 24 bit and size = 32 x 32;  ~/path/folder/bmps/test2.bmp with mode "P" have bpp = 8 bit and size = 16 x 16 --> Successfully wrote icon to ~/path/folder/icos/test012.ico.']
 ```
 #### How to write more *.ICOs*.
 ```python
 >>> forced_bpp_conversion = False
->>> logs_mess = WRITER.ToIco( forced_bpp_conversion , [ ['~/path/folder/pngs/test0.png', '~/path/folder/pngs/test1.png'], 
-                                                         ['~/path/folder/pngs/test2.png']
-                                                       ], 
-                                                       ['~/path/folder/icos/test0and1.ico', '~/path/folder/icos/test2.ico'] )
+>>> logs_mess = WRITER().ToIco( forced_bpp_conversion , [ ['~/path/folder/pngs/test0.png', '~/path/folder/pngs/test1.png'], 
+                                                          ['~/path/folder/pngs/test2.png']
+                                                        ], 
+                                                          ['~/path/folder/icos/test0and1.ico', '~/path/folder/icos/test2.ico'] )
 >>> logs_mess[0]
 '~/path/folder/pngs/test0.png with mode "RGBA" have bpp = 32 bit and size = 32 x 32; ~/path/folder/pngs/test1.png with mode "RGBA" have bpp = 32 bit and size = 16 x 16 --> Successfully wrote icon to ~/path/folder/icos/test0and1.ico.'
 >>> logs_mess[1]
