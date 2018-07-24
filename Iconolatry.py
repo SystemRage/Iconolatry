@@ -11,7 +11,7 @@ from io import BytesIO
 import numpy
 
 __name__        = "Iconolatry"
-__version__     = "1.0"
+__version__     = "1.1"
 __license__     = "MIT License"
 __author__      = u"Matteo ℱan <SystemRage@protonmail.com>"
 __copyright__   = "© Copyright 2018"
@@ -127,6 +127,9 @@ class READER( object ):
 ##|__________________|
 ##        
 class MASK( object ):
+    """ edited / adapted parts of
+        https://chromium.googlesource.com/chromium/src/+/master/tools/resources/ico_tools.py
+    """
     
     def ComputeANDMask( self, imgdata, width, height ):
         """ Computes AND mask from 32-bit BGRA image data. """
@@ -241,11 +244,10 @@ class WRITER( object ):
         rowsize = int(((bits * image_width + 31) // 32)) * 4
         return rowsize
 
-    def HeaderIcondir( self, idCount ):
+    def HeaderIcondir( self, idCount, idType ):
         """ Defines the ICONDIR header. """
         ## (2bytes)idReserved (always 0) - (2bytes)idType (ico=1, cur=2) - (2bytes)idCount.
         idReserved = 0
-        idType = 1
         head = pack('3H', idReserved, idType, idCount)
         return head
 
@@ -363,7 +365,7 @@ class WRITER( object ):
             return oldw, oldh, image, log_mess
         
 
-        ##                fixbit=True    fixbit=False
+        ##                flag_bit=True    flag_bit=False
         ##--------------------------------------------------
         ##  "RGB;24,48"     RGB;24        RGB;24, *RGB;48
         ##  "RGB+transp"    RGBA;32       RGBA;32
@@ -382,7 +384,7 @@ class WRITER( object ):
         ##--------------------------------------------------
         ## Note: *convertible but visualization not supported.
 
-        ## TODO: if possible with (fixbit=False) "L;2,4,8" --> L;2,4,8 
+        ## TODO: if possible with (flag_bit=False) "L;2,4,8" --> L;2,4,8 
         ##           conversion                  "I;16"    --> I;16
         ##                                       "1"       --> 1
         ##                                       "P;1,2,4" --> P;1,2,4
@@ -430,7 +432,7 @@ class WRITER( object ):
         return img, imgdata, mode, bpp
     
 
-    def Build( self, image_paths, output_path ):
+    def Build( self, image_paths, output_path, idType ):
         """ Creates and saves the ICO file. """
         global log_mess
         
@@ -438,7 +440,7 @@ class WRITER( object ):
         img_data = b''
         ## Define header of ICO file.
         num_images = len(image_paths)
-        ico_data = self.HeaderIcondir( num_images )
+        ico_data = self.HeaderIcondir( num_images, idType )
 
         ## Size of all the headers (image headers + file header)
         ## (1byte)bWidth - (1byte)bHeight - (1byte)bColorCount - (1byte)bReserved -
@@ -547,7 +549,11 @@ class WRITER( object ):
         else:
             if isinstance(icopaths, list):
                 for path in icopaths:
-                    if not path.lower().endswith('.ico'):
+                    if path.lower().endswith('.ico'):
+                        idType = 1
+                    elif path.lower().endswith('.cur'):
+                        idType = 2
+                    else:
                         log_err = 'Output: file "%s" with wrong file extension' %path
                         return log_err
             else:
@@ -563,6 +569,9 @@ class WRITER( object ):
                 if not paths:
                     log_err = 'Input: file/s missing\n'
                     return log_err
+                elif idType == 2 and len(paths) > 1:
+                    log_err = "Input: can't create multi-size .cur\n"
+                    return log_err
                 else:
                     for path in paths:
                         if not isfile(path):
@@ -574,7 +583,7 @@ class WRITER( object ):
             
         ## Do process.
         for path in zip(imagepaths, icopaths):
-            all_log_mess.append(self.Build( path[0], path[1] ))
+            all_log_mess.append(self.Build( path[0], path[1], idType ))
             
         return all_log_mess
     
