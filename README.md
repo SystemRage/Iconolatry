@@ -3,97 +3,153 @@
 
 ## Why
 There are several online converters, icon makers and favicon generators that can 
-transform many image formats in *.ICO* files or to achieve reverse process,
-but only a few of them are really working and none of them have an API.
-So i developped a pure python small library not using external software (like *ImageMagick*) to perform this operations.
+transform image formats in `.ico` files or to achieve reverse process,
+but only a few of them are really working and none of these provides an API.
+So i developped a pure python small library, not using external software (like *ImageMagick*), 
+to perform the above operations.
 
 ## Features
-- Reads *.ICO* and *.CUR.*
-   - Supports multi-sized RGBA 32-bit and RGB 24-bit icon and cursor files.
-   - Checks if the image AND mask is correct, otherwise is recomputed if needs.
-   - Easy export in other image formats.
-   
-- Writes *.ICO* (or *.CUR*) from a set of all supported by PIL image formats.
-   - Can be generated *.ICO* multi-sized.
-   - Gives info messages about conversion process.
-   - Automatically resizes input images to the nearest standard icon size.
-   - Supports *forced* or *raw* bit per pixel conversion.
-   - Makes conversion for different color depths, with or not alpha channel / trasparency.
+- Gives detailed info about conversion process.
+- You can use it as bare module inside your projects or running it with CLI commands. 
+
+- Reads `.ico` and `.cur` formats:
+   - You can decode a single icon / cursor, a list of icon / cursor(s), a folder, a list of folders, or mixing...
+   - You can decode icon / cursor(s) as bytes stream(s) too.
+   - You can select output paths, output file names, output file formats (all those supported by *PIL*) for every conversion process.
+   - Supports decoding multi-size and / or multi-depth icons.
+   - Checks if the image *AND* mask is correct, otherwise is recomputed if needs.
+
+- Writes `.ico` and `.cur` using a set of images (whose formats are supported by *PIL*):
+   - You can convert a single image, a list of images, a folder, a list of folders, or mixing...
+   - You can select output paths, output file names, output file formats (`.ico`, `.cur`) for every conversion process.
+   - You can generate `.ico` multi-format (packing many images with different sizes and depths).
+   - You can provide fixed resize values or automatically let to resize input images to the nearest standard icon size.
+   - You can provide hotspots for `.cur` conversions.
+   - You can provide custom palettes to apply during conversion (for indexed images).
 
 ## Requirements
- *Python 3.5+*,  *PIL (Pillow) 3.3.1+*, *Numpy*
+   - `Python 3+`
+   - `PIL (Pillow)`
 
-## Usage examples
-#### How to read an *.ICO*.
-`FromIcoCur( ... )` returns a list of lists containing each image stored in *.ICO*:
-[ [PIL_object_0, total_number_of_images, width_0, height_0, hotspotX_0, hotspotY_0],...,[PIL_object_N, total_number_of_images, width_N, height_N, hotspotX_N, hotspotY_N] ].
+## Options
+
+### Encoder
+
+|    Parameter      | CLI |       Type      |                                      Description                                                    |
+|-------------------|-----|-----------------|-----------------------------------------------------------------------------------------------------|
+| `paths_images`    | `-i`| list of lists   | every list can contain one/more image(s) path(s) and/or one/more folder image(s) path(s) to convert |
+| `paths_icocur`    | `-o`| list            | contains output path(s) for every resulting conversion. If isn't defined, working directory is used |
+| `names_icocur`    | `-n`| list            | contains output name(s) for every resulting conversion. If `paths_images` contains a *folder path* and corresponding `names_icocur` is defined, a multi-`.ico` is created, otherwise every image in *folder path* is converted to a single `.ico`/`.cur` |
+| `formats_icocur`  | `-f`| list            | contains format(s) for every resulting conversion (*'.ico'* or *'.cur'*). If `.cur`, can be specified hotspot x (integer) and hotspot y (integer) using a tuple; example: *('.cur', 2, 5)* |
+| `type_resize`     | `-r`| string or tuple | with *'up256_prop'* dimensions >256 pixels are resized keeping global image aspect ratio, with *'up256_no_prop'* dimensions >256 pixels are resized without keeping global image aspect ratio, with *'square'* dimensions are resized to nearest            square standard size, with a tuple *(width, height)* for a custom resize |
+| `custom_palettes` | `-p`| dict            | the key is a tuple *(mode, bitdepth)*, the value can be a list of RGB tuples *[(R1,G1,B1),...,(Rn,Bn,Gn)]* (usual palette format) or a flat list *[V1,V2,...,Vn]* (compact format for grayscale palette) or a `.gpl` file path |
+
+### Decoder
+
+|    Parameter     | CLI | Type |                                      Description                                                  |
+|------------------|-----|------|---------------------------------------------------------------------------------------------------|
+| `paths_icocurs`  | `-i`| list | contains one/more icon/cursor(s) path(s) and/or one/more folder icon/cursor(s) path(s) to convert |
+| `paths_image`    | `-o`| list | contains output path(s) for every resulting conversion. If isn't defined, working directory is used |
+| `names_image`    | `-n`| list | contains output name(s) for every resulting conversion |
+| `formats_image`  | `-f`| list | contains format(s) for every resulting conversion (all saving PIL formats) |
+| `rebuild`        | `-u`| bool | if *True*, recompute mask from the alpha channel data |
+
+## Usage Examples
+
+### How to write an `.ico`.
 ```python
->>> path = '~/path/folder/icons/test_multisized_icon.ico'
->>> ico_readed, log_err = READER().FromIcoCur( path, rebuild = False )
->>> log_err
-''
->>> ico_readed
-[[<PIL.Image.Image image mode=RGBA size=64x64 at 0x7F096AA93BE0>, 4, 64, 64, 1, 32], [<PIL.Image.Image image mode=RGBA size=48x48 at 0x7F096AA93C50>, 4, 48, 48, 1, 32], [<PIL.Image.Image image mode=RGBA size=32x32 at 0x7F096AA93CC0>, 4, 32, 32, 1, 32], [<PIL.Image.Image image mode=RGBA size=16x16 at 0x7F096AA93D30>, 4, 16, 16, 1, 32]]
+>>> conv = Encode([['/path/input/test0.png']], paths_icocur = ['/path/output'], names_icocur = ['myname'], formats_icocur = ['.ico'],
+                  type_resize = (48, 28))
+>>> conv.all_icocur_written
+{'/path/output/myname.ico': [{'file': '/path/input/test0.png', 'mode': 'grayscale', 'depth': 1, 'size': '32 x 32', 'resize': '48 x 28'}]}
 ```
-#### How to export after *.ICO* reading.
-```python
->>> ico_readed[0][0].save('~/path/folder/export/64x64.png', 'PNG')
->>> ico_readed[1][0].save('~/path/folder/export/48x48.bmp', 'BMP')
 ```
-#### How to read a *.CUR*.
-```python
->>> path = '~/path/folder/cursors/test_cur.cur'
->>> cur_readed, log_err = READER().FromIcoCur( path, rebuild = False )
->>> cur_readed
-[[<PIL.Image.Image image mode=RGBA size=32x32 at 0x7FB2A2FB3240>, 1, 32, 32, 0, 24]]
+python3 Iconolatry.py encode -i /path/input/test0.png -o /path/output -n myname -f .ico -r "(48, 28)"
 ```
-#### How to write an *.ICO*.
-`ToIco( ... )` returns a list containing info messages for each conversion.
+
+### How to write a `.cur`.
 ```python
->>> forced_bpp_conversion = False
->>> log_mess = WRITER().ToIco( forced_bpp_conversion, [['~/path/folder/pngs/test.png']], ['~/path/folder/icos/test.ico'] )
->>> log_mess
-['~/path/folder/pngs/test.png with mode "RGBA" have bpp = 32 bit --> Successfully wrote icon to ~/path/folder/icos/test.ico.']
+>>> conv = Encode([['/path/input/test0.png']], paths_icocur = ['/path/output'], names_icocur = ['myname'], formats_icocur = [('.cur', 2, 5)],
+                  custom_palettes = {('1', 1) : '/path/palettes/custom1bit.gpl')
+>>> conv.all_icocur_written
+{'/path/output/myname.cur': [{'file': '/path/input/test0.png', 'mode': 'grayscale', 'depth': 1, 'size': '32 x 32'}]}
 ```
-#### How to write a *.CUR*.
-```python
->>> forced_bpp_conversion = False
->>> log_mess = WRITER().ToIco( forced_bpp_conversion, [['~/path/folder/pngs/test.png']], ['~/path/folder/curs/test.cur'] )
->>> log_mess
-['~/path/folder/pngs/test.png with mode "RGB" have bpp = 24 bit --> Successfully wrote icon to ~/path/folder/curs/test.cur.']
 ```
-#### How to write a multi-size *.ICO* from various image formats.
-```python
->>> forced_bpp_conversion = False
->>> log_mess = WRITER().ToIco( forced_bpp_conversion, [ ['~/path/folder/pngs/test0.png', '~/path/folder/jpgs/test1.jpg',
-                                                         '~/path/folder/bmps/test2.bmp ] 
-                                                      ],
-                                                        ['~/path/folder/icos/test012.ico'] )
->>> log_mess
-['~/path/folder/pngs/test0.png with mode "RGBA" have bpp = 32 bit and size = 48 x 48;  ~/path/folder/jpgs/test1.jpg with mode "RGB" have bpp = 24 bit and size = 32 x 32;  ~/path/folder/bmps/test2.bmp with mode "P" have bpp = 8 bit and size = 16 x 16 --> Successfully wrote icon to ~/path/folder/icos/test012.ico.']
+python3 Iconolatry.py encode -i /path/input/test0.png -o /path/output -n myname -f "('.cur', 2, 5)" -p "{('1', 1) : '/path/palettes/custom1bit.gpl'}"
 ```
-#### How to write more *.ICOs*.
+
+#### How to write a multi-`.ico`.
 ```python
->>> forced_bpp_conversion = False
->>> logs_mess = WRITER().ToIco( forced_bpp_conversion , [ ['~/path/folder/pngs/test0.png', '~/path/folder/pngs/test1.png'], 
-                                                          ['~/path/folder/pngs/test2.png']
-                                                        ], 
-                                                          ['~/path/folder/icos/test0and1.ico', '~/path/folder/icos/test2.ico'] )
->>> logs_mess[0]
-'~/path/folder/pngs/test0.png with mode "RGBA" have bpp = 32 bit and size = 32 x 32; ~/path/folder/pngs/test1.png with mode "RGBA" have bpp = 32 bit and size = 16 x 16 --> Successfully wrote icon to ~/path/folder/icos/test0and1.ico.'
->>> logs_mess[1]
-'~/path/folder/pngs/test2.png with mode "RGBA" have bpp = 32 bit --> Successfully wrote icon to ~/path/folder/icos/test2.ico.
+>>> conv = Encode([['/path/input/test0.png', '/path/input/test1.bmp', '/path/input/test2.jpg']], paths_icocur = [''],
+                  names_icocur = [''], formats_icocur = ['.ico'])
+>>> conv.all_icocur_written
+{'/path/working/directory/multi.ico': [{'file': '/path/input/test0.png', 'mode': 'grayscale', 'depth': 1, 'size': '32 x 32'}, {'file': '/path/input/test1.bmp', 'mode': 'grayscale', 'depth': 4, 'size': '48 x 48'}, {'file': '/path/input/test2.jpg', 'mode': 'grayscale', 'depth': 8, 'size': '16 x 16'}]
+}
 ```
-#### How to automatize process for folders.
+Note how the *multi* name is auto-assigned because `names_icocur` isn't setted.
+```
+python3 Iconolatry.py encode -i /path/input/test0.png /path/input/test1.bmp /path/input/test2.jpg -f .ico
+```
+
+#### How to write more `.ico`s and/or `.cur`s together.
 ```python
->>> path = '~/path/folder/images/pngs'
->>> pngs = [ [(path + testimage)] for testimage in os.listdir(path) ]
->>> icos = [ (path + testimage).replace('.png','.ico') for testimage in os.listdir(path) ]
->>> forced_bpp_conversion = False
->>> logs_mess = WRITER.ToIco( forced_bpp_conversion, pngs, icos )
+>>> conv = Encode([['/path/input/test0.png', '/path/input/test1.png'], ['/path/input/test2.png']], 
+                  paths_icocur = ['/path/outputA', '/path/outputB'],
+                  names_icocur = ['test01', 'test2'],
+                  formats_icocur = ['.ico', '.cur'])
+>>> conv.all_icocur_written
+{'/path/outputA/test01.ico': [{'file': '/path/input/test0.png', 'mode': 'grayscale', 'depth': 1, 'size': '32 x 32'}, {'file': '/path/input/test1.png', 'mode': 'grayscale', 'depth': 4, 'size': '48 x 48'}], 
+'/path/outputB/test2.cur': [{'file': '/path/input/test2.png', 'mode': 'grayscale', 'depth': 8, 'size': '16 x 16'}]
+}
+```
+```
+python3 Iconolatry.py encode -i /path/input/test0.png /path/input/test1.png -o /path/outputA -i /path/input/test2.png -o /path/outputB
+-n test01 test2 -f .ico .cur
+```
+
+#### How to encode image folders.
+```python
+>>> conv = Encode([['/path/input/folder'], ['/path/input/folder']], paths_icocur = ['/path/outputA', '/path/outputB'], 
+                    names_icocur = ['mymultico', ''],
+                    formats_icocur = ['.ico', '.cur'])
+>>> conv.all_icocur_written
+{'/path/outputA/mymulti.ico': [{'file': '/path/input/folder/test0.png', 'mode': 'grayscale', 'depth': 1, 'size': '32 x 32'}, {'file': '/path/input/folder/test1.png', 'mode': 'grayscale', 'depth': 4, 'size': '48 x 48'}, {'file': '/path/input/folder/test2.png', 'mode': 'grayscale', 'depth': 8, 'size': '16 x 16'}],
+'/path/outputB/test0.cur': [{'file': '/path/input/folder/test0.png', 'mode': 'grayscale', 'depth': 1, 'size': '32 x 32', 'hotspot_x': 0, 'hotspot_y': 0}], 
+'/path/outputB/test1.cur': [{'file': '/path/input/folder/test1.png', 'mode': 'grayscale', 'depth': 4, 'size': '48 x 48', 'hotspot_x': 0, 'hotspot_y': 0}], 
+'/path/outputB/test2.cur': [{'file': '/path/input/folder/test2.png', 'mode': 'grayscale', 'depth': 8, 'size': '16 x 16', 'hotspot_x': 0, 'hotspot_y': 0}]
+}
+```
+```
+python3 Iconolatry.py encode -i /path/input/folder -o /path/outputA -n mymultico -f .ico -i /path/input/folder -o /path/outputB -f .cur
+```
+
+#### How to read more `.ico` and/or `.cur` together.
+```python
+>>> conv = Decode(['/path/input/cursor.cur', '/path/input/multicon.ico'], paths_image = [''], names_image = [''], formats_image = ['.png', '.bmp'])
+
+>>> conv.all_icocur_readed
+{'/path/input/cursor.cur': {'image_0': {'im_obj': <PIL.Image.Image image mode=RGBA size=32x32 at 0x7FDEF936C780>, 'depth': 32, 'hotspot_x': 0, 'hotspot_y': 0, 'saved': '/path/working/directory/cursor.png'}}, 
+'/path/input/multicon.ico': {'image_0': {'im_obj': <PIL.Image.Image image mode=RGBA size=16x16 at 0x7FDEF936C860>, 'depth': 1, 'saved': '/path/working/directory/multicon_0.bmp'}, 'image_1': {'im_obj': <PIL.Image.Image image mode=RGBA size=32x32 at 0x7FDEF936C630>, 'depth': 24, 'saved': '/path/working/directory/multicon_1.bmp'}, 'image_2': {'im_obj': <PIL.Image.Image image mode=RGBA size=48x48 at 0x7FDEF936C4A8>, 'depth': 32, 'saved': '/path/working/directory/multicon_2.bmp'}}
+}
+```
+```
+python3 Iconolatry.py decode -i /path/input/cursor.cur /path/input/multicon.ico -f .png .bmp
+```
+
+#### How to decode image folders.
+```python
+>>> conv = Decode(['/path/input/folder'], paths_image = ['/path/outputA'], names_image = ['customname'], rebuild = True)
+
+>>> conv.all_icocur_readed
+{'/path/input/folder/test0.cur': {'image_0': {'im_obj': <PIL.Image.Image image mode=RGBA size=16x16 at 0x7FDFDE8E52E8>, 'depth': 1, 'hotspot_x': 0, 'hotspot_y': 0, 'saved': '/path/outputA/customname_0.png'}}, 
+'/path/input/folder/test1.cur': {'image_0': {'im_obj': <PIL.Image.Image image mode=RGBA size=48x48 at 0x7FDFDE8E5438>, 'depth': 32, 'hotspot_x': 0, 'hotspot_y': 0, 'saved': '/path/outputA/customname_1.png'}}, 
+'/path/input/folder/test2.cur': {'image_0': {'im_obj': <PIL.Image.Image image mode=RGBA size=32x32 at 0x7FDFDE8E5860>, 'depth': 24, 'hotspot_x': 0, 'hotspot_y': 0, 'saved': '/path/outputA/customname_2.png'}}, 
+'/path/input/folder/testymulti.ico': {'image_0': {'im_obj': <PIL.Image.Image image mode=RGBA size=16x16 at 0x7FDFDE8E5240>, 'depth': 1, 'saved': '/path/outputA/customname_3.png'}, 'image_1': {'im_obj': <PIL.Image.Image image mode=RGBA size=48x48 at 0x7FDFDE8E5B70>, 'depth': 32, 'saved': '/path/outputA/customname_4.png'}, 'image_2': {'im_obj': <PIL.Image.Image image mode=RGBA size=32x32 at 0x7FDFDE8E5C18>, 'depth': 24, 'saved': '/path/outputA/customname_5.png'}}
+}
+```
+```
+python3 Iconolatry.py decode -i /path/input/folder -o /path/outputA -n customname -u
 ```
 
 ## License
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/SystemRage/Iconolatry/blob/master/LICENSE) ©  Matteo ℱan
-
-
